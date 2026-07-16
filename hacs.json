@@ -1,0 +1,7 @@
+{
+  "name": "Alert Hub",
+  "render_readme": true,
+  "zip_release": false,
+  "filename": "alert_hub.zip",
+  "homeassistant": "2024.1.0"
+}
