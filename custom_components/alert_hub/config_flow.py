@@ -9,7 +9,20 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
-from .const import CONF_DEVICE_ID, CONF_DEVICES, CONF_ENABLED, CONF_LABEL, DOMAIN
+from .const import (
+    CONF_DEVICE_ID,
+    CONF_DEVICES,
+    CONF_ENABLED,
+    CONF_LABEL,
+    CONF_SOURCES,
+    DOMAIN,
+)
+
+
+def _parse_sources(raw: str) -> list[str]:
+    """Turn a comma-separated 'Kitchen, Laundry' string into ['Kitchen', 'Laundry'].
+    Blank input means "no filter" (device sees every alert)."""
+    return [s.strip() for s in raw.split(",") if s.strip()]
 
 
 class AlertHubConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -45,13 +58,14 @@ class AlertHubOptionsFlow(config_entries.OptionsFlow):
         self._devices: list[dict[str, Any]] = list(
             config_entry.options.get(CONF_DEVICES, [])
         )
+        self._editing_label: str | None = None
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         return self.async_show_menu(
             step_id="init",
-            menu_options=["add_device", "remove_device", "finish"],
+            menu_options=["add_device", "edit_device", "remove_device", "finish"],
         )
 
     async def async_step_add_device(
@@ -65,6 +79,7 @@ class AlertHubOptionsFlow(config_entries.OptionsFlow):
                     CONF_DEVICE_ID: user_input[CONF_DEVICE_ID],
                     CONF_LABEL: user_input[CONF_LABEL],
                     CONF_ENABLED: True,
+                    CONF_SOURCES: _parse_sources(user_input.get(CONF_SOURCES, "")),
                 }
             )
             return await self.async_step_init()
@@ -75,10 +90,63 @@ class AlertHubOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(CONF_DEVICE_ID): selector.DeviceSelector(
                     selector.DeviceSelectorConfig(integration="browser_mod")
                 ),
+                vol.Optional(CONF_SOURCES, default=""): selector.TextSelector(),
             }
         )
         return self.async_show_form(
             step_id="add_device", data_schema=schema, errors=errors
+        )
+
+    async def async_step_edit_device(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Pick which existing device to edit (change its source filter)."""
+        if not self._devices:
+            return await self.async_step_init()
+
+        if user_input is not None:
+            self._editing_label = user_input["device"]
+            return await self.async_step_edit_device_form()
+
+        schema = vol.Schema(
+            {
+                vol.Required("device"): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[d[CONF_LABEL] for d in self._devices],
+                        mode=selector.SelectSelectorMode.LIST,
+                    )
+                )
+            }
+        )
+        return self.async_show_form(step_id="edit_device", data_schema=schema)
+
+    async def async_step_edit_device_form(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        current = next(
+            d for d in self._devices if d[CONF_LABEL] == self._editing_label
+        )
+
+        if user_input is not None:
+            current[CONF_SOURCES] = _parse_sources(user_input.get(CONF_SOURCES, ""))
+            current[CONF_ENABLED] = user_input.get(CONF_ENABLED, True)
+            self._editing_label = None
+            return await self.async_step_init()
+
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_SOURCES, default=", ".join(current.get(CONF_SOURCES, []))
+                ): selector.TextSelector(),
+                vol.Optional(
+                    CONF_ENABLED, default=current.get(CONF_ENABLED, True)
+                ): selector.BooleanSelector(),
+            }
+        )
+        return self.async_show_form(
+            step_id="edit_device_form",
+            data_schema=schema,
+            description_placeholders={"label": current[CONF_LABEL]},
         )
 
     async def async_step_remove_device(

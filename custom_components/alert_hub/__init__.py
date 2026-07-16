@@ -27,6 +27,7 @@ from .const import (
     CONF_DEVICE_ID,
     CONF_DEVICES,
     CONF_ENABLED,
+    CONF_SOURCES,
     DOMAIN,
     POPUP_TAG,
     SERVICE_ADD_ALERT,
@@ -59,51 +60,65 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
-    def _target_device_ids() -> list[str]:
+    def _enabled_devices() -> list[dict[str, Any]]:
         return [
-            d[CONF_DEVICE_ID]
-            for d in entry.options.get(CONF_DEVICES, [])
-            if d.get(CONF_ENABLED, True)
+            d for d in entry.options.get(CONF_DEVICES, []) if d.get(CONF_ENABLED, True)
         ]
 
-    async def _sync_popup() -> None:
-        """Push the current alert queue to a single, updating popup on
-        every enabled device (one popup per device, kept in sync via tag)."""
-        device_ids = _target_device_ids()
-        if not device_ids:
-            return
+    def _visible_alerts_for(device: dict[str, Any]) -> list[dict[str, Any]]:
+        """Alerts this device should see. Empty/missing 'sources' = no
+        filter = every alert (matches pre-filtering behavior)."""
+        sources = device.get(CONF_SOURCES) or []
+        if not sources:
+            return store.alerts
+        wanted = {s.strip().lower() for s in sources}
+        return [
+            a for a in store.alerts if (a.get("title") or "").strip().lower() in wanted
+        ]
 
-        if not store.alerts:
-            await hass.services.async_call(
-                "browser_mod",
-                "close_popup",
-                {"tag": POPUP_TAG, "browser_id": device_ids},
-                blocking=True,
-            )
-            return
-
+    def _render_content(alerts: list[dict[str, Any]]) -> str:
         lines = []
-        for alert in store.alerts:
+        for alert in alerts:
             ts = alert["created"][11:16]  # HH:MM out of the ISO timestamp
             prefix = f"**{alert['title']}:** " if alert.get("title") else ""
             lines.append(f"- `{ts}` {prefix}{alert['message']}")
-        content = "\n".join(lines)
+        return "\n".join(lines)
 
-        await hass.services.async_call(
-            "browser_mod",
-            "popup",
-            {
-                "browser_id": device_ids,
-                "tag": POPUP_TAG,
-                "title": f"\U0001f514 Active Alerts ({len(store.alerts)})",
-                "content": {"type": "markdown", "content": content},
-                "initial_style": "normal",
-                "dismissable": True,
-                "right_button": "Clear all",
-                "right_button_action": {"action": f"{DOMAIN}.{SERVICE_CLEAR_ALL}"},
-            },
-            blocking=True,
-        )
+    async def _sync_popup() -> None:
+        """Push each device its own filtered slice of the alert queue as a
+        single, updating popup (same tag = replace in place, not stack).
+        A device with no matching alerts gets its popup closed instead."""
+        for device in _enabled_devices():
+            device_id = device[CONF_DEVICE_ID]
+            visible = _visible_alerts_for(device)
+
+            if not visible:
+                await hass.services.async_call(
+                    "browser_mod",
+                    "close_popup",
+                    {"tag": POPUP_TAG, "browser_id": [device_id]},
+                    blocking=True,
+                )
+                continue
+
+            await hass.services.async_call(
+                "browser_mod",
+                "popup",
+                {
+                    "browser_id": [device_id],
+                    "tag": POPUP_TAG,
+                    "title": f"\U0001f514 Active Alerts ({len(visible)})",
+                    "content": {
+                        "type": "markdown",
+                        "content": _render_content(visible),
+                    },
+                    "initial_style": "normal",
+                    "dismissable": True,
+                    "right_button": "Clear all",
+                    "right_button_action": {"action": f"{DOMAIN}.{SERVICE_CLEAR_ALL}"},
+                },
+                blocking=True,
+            )
 
     async def _async_refresh() -> None:
         async_dispatcher_send(hass, SIGNAL_ALERTS_UPDATED.format(entry_id=entry.entry_id))

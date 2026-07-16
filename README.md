@@ -14,6 +14,15 @@ A small custom Home Assistant integration that:
 3. Settings → Devices & Services → **Add Integration** → search "Alert Hub" → Submit (no fields needed).
 4. Click **Configure** on the new Alert Hub integration card → **Add a device** → give it a friendly name and pick the corresponding Browser Mod device. Repeat for each real device you want alerts to appear on. Choose **Done** when finished.
 
+## Filtering which alerts show on which device
+
+Every alert can carry a `title` (used as its category, e.g. `"Kitchen"`, `"Security"`, `"Laundry"`). When adding or editing a device, the **"Alert categories to show"** field takes a comma-separated list of those categories (e.g. `Kitchen, Laundry`):
+
+- Leave it blank → that device shows *every* alert, regardless of title (the default, matches pre-filtering behavior).
+- Fill it in → that device only shows alerts whose title matches one of the listed categories. Alerts with no title, or a title not in the list, are hidden on that device (but still visible on devices with no filter, and still counted in `sensor.alert_hub_active_alerts`, which always tracks the full unfiltered queue).
+
+To change a device's filter later without removing/re-adding it: Configure → **Edit a device's alert filter** → pick the device → update its categories (or toggle it off entirely).
+
 ## Wiring up notifications
 
 Point your existing "new persistent notification" automation at this integration instead of a plain helper:

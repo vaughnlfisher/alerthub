@@ -7,6 +7,9 @@ CONF_DEVICES = "devices"
 CONF_DEVICE_ID = "device_id"
 CONF_LABEL = "label"
 CONF_ENABLED = "enabled"
+# Optional list of alert "title" categories this device should show.
+# Empty/missing = no filter = show every alert (backwards compatible).
+CONF_SOURCES = "sources"
 
 # Storage
 STORAGE_VERSION = 1

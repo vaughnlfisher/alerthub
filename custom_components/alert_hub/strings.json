@@ -16,6 +16,7 @@
         "title": "Alert Hub devices",
         "menu_options": {
           "add_device": "Add a device",
+          "edit_device": "Edit a device's alert filter",
           "remove_device": "Remove a device",
           "finish": "Done"
         }
@@ -23,8 +24,22 @@
       "add_device": {
         "title": "Add a target device",
         "data": {
-          "label": "Friendly name (e.g. \"Kitchen Tablet\")",
-          "device_id": "Browser Mod device"
+          "label": "Friendly name",
+          "device_id": "Browser Mod device",
+          "sources": "Alert categories to show, comma separated. Leave blank to show every alert."
+        }
+      },
+      "edit_device": {
+        "title": "Which device do you want to edit?",
+        "data": {
+          "device": "Device"
+        }
+      },
+      "edit_device_form": {
+        "title": "Edit alert filter",
+        "data": {
+          "sources": "Alert categories to show, comma separated. Leave blank to show every alert.",
+          "enabled": "Enabled"
         }
       },
       "remove_device": {

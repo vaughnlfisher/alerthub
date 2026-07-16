@@ -1,13 +1,13 @@
 {
   "domain": "alert_hub",
   "name": "Alert Hub",
-  "codeowners": ["@REPLACE_WITH_YOUR_GITHUB_USERNAME"],
+  "codeowners": ["@vaughnlfisher"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/REPLACE_WITH_OWNER/REPLACE_WITH_REPO",
+  "documentation": "https://github.com/vaughnlfisher/alerthub",
   "integration_type": "hub",
   "iot_class": "local_push",
-  "issue_tracker": "https://github.com/REPLACE_WITH_OWNER/REPLACE_WITH_REPO/issues",
+  "issue_tracker": "https://github.com/vaughnlfisher/alerthub/issues",
   "requirements": [],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }
