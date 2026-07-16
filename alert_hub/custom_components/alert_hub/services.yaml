@@ -1,0 +1,34 @@
+add_alert:
+  name: Add alert
+  description: Add a new alert to the queue. Pushes/updates the single Browser Mod popup on all enabled target devices.
+  fields:
+    message:
+      name: Message
+      description: The alert text to display.
+      required: true
+      example: "Front door left open"
+      selector:
+        text:
+    title:
+      name: Title
+      description: Optional short title/category shown in bold before the message.
+      required: false
+      example: "Security"
+      selector:
+        text:
+
+clear_alert:
+  name: Clear one alert
+  description: Remove a single alert from the queue by its id. Shrinks/updates the popup, or closes it if this was the last alert.
+  fields:
+    alert_id:
+      name: Alert ID
+      description: The id returned when the alert was added (also visible in sensor.alert_hub_active_alerts' "alerts" attribute).
+      required: true
+      example: "a1b2c3d4"
+      selector:
+        text:
+
+clear_all:
+  name: Clear all alerts
+  description: Empty the whole queue and close the popup on all enabled target devices.
