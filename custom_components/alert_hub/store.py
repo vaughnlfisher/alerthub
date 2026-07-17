@@ -32,7 +32,12 @@ class AlertHubStore:
     async def _async_save(self) -> None:
         await self._store.async_save({"alerts": self.alerts})
 
-    async def async_add(self, message: str, title: str | None = None) -> str:
+    async def async_add(
+        self,
+        message: str,
+        title: str | None = None,
+        source_device_id: str | None = None,
+    ) -> str:
         """Add a new alert to the queue. Returns its id."""
         alert_id = uuid.uuid4().hex[:8]
         self.alerts.append(
@@ -40,6 +45,7 @@ class AlertHubStore:
                 "id": alert_id,
                 "title": title,
                 "message": message,
+                "source_device_id": source_device_id,
                 "created": datetime.now(timezone.utc).isoformat(),
             }
         )

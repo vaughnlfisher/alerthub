@@ -1,12 +1,14 @@
 """The Alert Hub integration.
 
 Owns:
-  - a config/options flow for naming and enabling target Browser Mod devices
+  - a config/options flow for naming and enabling target Browser Mod devices,
+    each with an optional list of *source* HA devices it should show alerts
+    for (picked via a device selector)
   - a native "active alerts" queue (sensor.alert_hub_active_alerts) that
     grows and shrinks as alerts are added/cleared
   - services (add_alert / clear_alert / clear_all) that automations call
   - the logic that keeps a single Browser Mod popup (identified by a fixed
-    `tag`) in sync with the current alert queue on the enabled devices
+    `tag`) in sync with each device's own filtered slice of the queue
 """
 from __future__ import annotations
 
@@ -23,11 +25,12 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from .const import (
     ATTR_ALERT_ID,
     ATTR_MESSAGE,
+    ATTR_SOURCE_DEVICE_ID,
     ATTR_TITLE,
     CONF_DEVICE_ID,
     CONF_DEVICES,
     CONF_ENABLED,
-    CONF_SOURCES,
+    CONF_SOURCE_DEVICES,
     DOMAIN,
     POPUP_TAG,
     SERVICE_ADD_ALERT,
@@ -45,6 +48,7 @@ ADD_ALERT_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_MESSAGE): cv.string,
         vol.Optional(ATTR_TITLE): cv.string,
+        vol.Optional(ATTR_SOURCE_DEVICE_ID): cv.string,
     }
 )
 CLEAR_ALERT_SCHEMA = vol.Schema({vol.Required(ATTR_ALERT_ID): cv.string})
@@ -66,15 +70,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ]
 
     def _visible_alerts_for(device: dict[str, Any]) -> list[dict[str, Any]]:
-        """Alerts this device should see. Empty/missing 'sources' = no
-        filter = every alert (matches pre-filtering behavior)."""
-        sources = device.get(CONF_SOURCES) or []
-        if not sources:
+        """Alerts this device should see. Empty/missing 'source_devices' =
+        no filter = every alert (matches pre-filtering behavior). Otherwise
+        only alerts whose source_device_id is one of the picked devices."""
+        wanted = device.get(CONF_SOURCE_DEVICES) or []
+        if not wanted:
             return store.alerts
-        wanted = {s.strip().lower() for s in sources}
-        return [
-            a for a in store.alerts if (a.get("title") or "").strip().lower() in wanted
-        ]
+        wanted_set = set(wanted)
+        return [a for a in store.alerts if a.get("source_device_id") in wanted_set]
 
     def _render_content(alerts: list[dict[str, Any]]) -> str:
         lines = []
@@ -125,7 +128,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _sync_popup()
 
     async def _handle_add_alert(call: ServiceCall) -> None:
-        await store.async_add(call.data[ATTR_MESSAGE], call.data.get(ATTR_TITLE))
+        await store.async_add(
+            call.data[ATTR_MESSAGE],
+            call.data.get(ATTR_TITLE),
+            call.data.get(ATTR_SOURCE_DEVICE_ID),
+        )
         await _async_refresh()
 
     async def _handle_clear_alert(call: ServiceCall) -> None:

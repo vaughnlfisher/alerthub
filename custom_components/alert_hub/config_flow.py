@@ -14,15 +14,9 @@ from .const import (
     CONF_DEVICES,
     CONF_ENABLED,
     CONF_LABEL,
-    CONF_SOURCES,
+    CONF_SOURCE_DEVICES,
     DOMAIN,
 )
-
-
-def _parse_sources(raw: str) -> list[str]:
-    """Turn a comma-separated 'Kitchen, Laundry' string into ['Kitchen', 'Laundry'].
-    Blank input means "no filter" (device sees every alert)."""
-    return [s.strip() for s in raw.split(",") if s.strip()]
 
 
 class AlertHubConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -79,7 +73,7 @@ class AlertHubOptionsFlow(config_entries.OptionsFlow):
                     CONF_DEVICE_ID: user_input[CONF_DEVICE_ID],
                     CONF_LABEL: user_input[CONF_LABEL],
                     CONF_ENABLED: True,
-                    CONF_SOURCES: _parse_sources(user_input.get(CONF_SOURCES, "")),
+                    CONF_SOURCE_DEVICES: user_input.get(CONF_SOURCE_DEVICES, []),
                 }
             )
             return await self.async_step_init()
@@ -90,7 +84,9 @@ class AlertHubOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(CONF_DEVICE_ID): selector.DeviceSelector(
                     selector.DeviceSelectorConfig(integration="browser_mod")
                 ),
-                vol.Optional(CONF_SOURCES, default=""): selector.TextSelector(),
+                vol.Optional(CONF_SOURCE_DEVICES, default=[]): selector.DeviceSelector(
+                    selector.DeviceSelectorConfig(multiple=True)
+                ),
             }
         )
         return self.async_show_form(
@@ -128,7 +124,7 @@ class AlertHubOptionsFlow(config_entries.OptionsFlow):
         )
 
         if user_input is not None:
-            current[CONF_SOURCES] = _parse_sources(user_input.get(CONF_SOURCES, ""))
+            current[CONF_SOURCE_DEVICES] = user_input.get(CONF_SOURCE_DEVICES, [])
             current[CONF_ENABLED] = user_input.get(CONF_ENABLED, True)
             self._editing_label = None
             return await self.async_step_init()
@@ -136,8 +132,9 @@ class AlertHubOptionsFlow(config_entries.OptionsFlow):
         schema = vol.Schema(
             {
                 vol.Optional(
-                    CONF_SOURCES, default=", ".join(current.get(CONF_SOURCES, []))
-                ): selector.TextSelector(),
+                    CONF_SOURCE_DEVICES,
+                    default=current.get(CONF_SOURCE_DEVICES, []),
+                ): selector.DeviceSelector(selector.DeviceSelectorConfig(multiple=True)),
                 vol.Optional(
                     CONF_ENABLED, default=current.get(CONF_ENABLED, True)
                 ): selector.BooleanSelector(),

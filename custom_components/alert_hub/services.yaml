@@ -1,6 +1,6 @@
 add_alert:
   name: Add alert
-  description: Add a new alert to the queue. Pushes/updates the single Browser Mod popup on all enabled target devices.
+  description: Add a new alert to the queue. Pushes/updates the single Browser Mod popup on every enabled target device whose source-device filter matches (or has no filter).
   fields:
     message:
       name: Message
@@ -11,15 +11,21 @@ add_alert:
         text:
     title:
       name: Title
-      description: Optional short title/category shown in bold before the message.
+      description: Optional short title shown in bold before the message.
       required: false
       example: "Security"
       selector:
         text:
+    source_device_id:
+      name: Source device
+      description: The real HA device this alert relates to (e.g. the front door sensor's device, the washing machine plug's device). Used to decide which target devices should show this alert - each target device is configured with a list of source devices it cares about.
+      required: false
+      selector:
+        device:
 
 clear_alert:
   name: Clear one alert
-  description: Remove a single alert from the queue by its id. Shrinks/updates the popup, or closes it if this was the last alert.
+  description: Remove a single alert from the queue by its id. Shrinks/updates the popup, or closes it if this was the last matching alert for that device.
   fields:
     alert_id:
       name: Alert ID

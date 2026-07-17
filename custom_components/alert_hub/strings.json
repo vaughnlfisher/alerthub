@@ -26,7 +26,7 @@
         "data": {
           "label": "Friendly name",
           "device_id": "Browser Mod device",
-          "sources": "Alert categories to show, comma separated. Leave blank to show every alert."
+          "source_devices": "Only show alerts from these devices (leave empty to show every alert)"
         }
       },
       "edit_device": {
@@ -38,7 +38,7 @@
       "edit_device_form": {
         "title": "Edit alert filter",
         "data": {
-          "sources": "Alert categories to show, comma separated. Leave blank to show every alert.",
+          "source_devices": "Only show alerts from these devices (leave empty to show every alert)",
           "enabled": "Enabled"
         }
       },
